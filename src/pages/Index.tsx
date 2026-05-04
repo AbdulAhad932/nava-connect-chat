@@ -53,7 +53,7 @@ const Index = () => {
         <Avatar className="h-10 w-10 border-2 border-primary-foreground/30">
           <AvatarImage src={profile.photo_url ?? undefined} />
           <AvatarFallback className="bg-primary-dark text-primary-foreground">
-            {profile.name[0].toUpperCase()}
+            {(profile?.name?.trim()?.[0] || "U").toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <Button
