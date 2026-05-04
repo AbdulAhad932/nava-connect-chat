@@ -25,6 +25,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/chat/:userId" element={<Chat />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
