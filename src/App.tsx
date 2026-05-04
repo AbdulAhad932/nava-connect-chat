@@ -8,6 +8,7 @@ import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
 import ProfileSetup from "./pages/ProfileSetup.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
+import Chat from "./pages/Chat.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/chat/:userId" element={<Chat />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
