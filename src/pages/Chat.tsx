@@ -205,7 +205,7 @@ const Chat = () => {
                     (m.is_read ? (
                       <CheckCheck className="h-3.5 w-3.5 text-sky-300" />
                     ) : (
-                      <CheckCheck className="h-3.5 w-3.5" />
+                      <Check className="h-3.5 w-3.5" />
                     ))}
                 </div>
               </div>
