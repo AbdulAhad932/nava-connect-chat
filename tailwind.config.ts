@@ -22,6 +22,19 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          glow: "hsl(var(--primary-glow))",
+          dark: "hsl(var(--primary-dark))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        chat: {
+          bg: "hsl(var(--chat-bg))",
+          sent: "hsl(var(--bubble-sent))",
+          "sent-foreground": "hsl(var(--bubble-sent-foreground))",
+          received: "hsl(var(--bubble-received))",
+          "received-foreground": "hsl(var(--bubble-received-foreground))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
