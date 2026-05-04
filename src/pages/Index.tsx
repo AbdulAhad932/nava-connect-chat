@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useGlobalPresence } from "@/hooks/usePresence";
 import { NavaLogo } from "@/components/NavaLogo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ const Index = () => {
   const [chats, setChats] = useState<Record<string, ChatRow>>({});
   const [search, setSearch] = useState("");
   const [checking, setChecking] = useState(true);
+  const onlineSet = useGlobalPresence(user?.id);
 
   useEffect(() => {
     if (loading) return;
@@ -84,7 +86,7 @@ const Index = () => {
     })();
   }, [user, loading, navigate]);
 
-  // Realtime: refresh chat list on new messages
+  // Realtime: refresh chat list on new messages + read updates
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -112,6 +114,25 @@ const Index = () => {
           });
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const m: any = payload.new;
+          const old: any = payload.old;
+          // when receiver marks as read, we (sender) don't need to change unread
+          // but if the user themselves is the receiver and message becomes read, decrement
+          if (m.receiver_id !== user.id) return;
+          if (old?.is_read === false && m.is_read === true) {
+            const otherId = m.sender_id;
+            setChats((prev) => {
+              const row = prev[otherId];
+              if (!row || row.unread <= 0) return prev;
+              return { ...prev, [otherId]: { ...row, unread: row.unread - 1 } };
+            });
+          }
+        }
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -126,10 +147,9 @@ const Index = () => {
     );
   }
 
+  const q = search.trim().toLowerCase();
   const sorted = users
-    .filter((u) =>
-      (u.name ?? "").toLowerCase().includes(search.toLowerCase())
-    )
+    .filter((u) => (u.name ?? "").toLowerCase().includes(q))
     .map((u) => chats[u.id])
     .filter(Boolean)
     .sort((a, b) => {
@@ -168,13 +188,13 @@ const Index = () => {
         </Button>
       </header>
 
-      <div className="px-4 py-3 bg-background border-b">
+      <div className="px-4 py-3 bg-background border-b sticky top-[72px] z-[5]">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search users..."
+            placeholder="Search users by name..."
             className="pl-9 h-10 rounded-xl"
           />
         </div>
@@ -186,49 +206,58 @@ const Index = () => {
             Koi user nahi mila
           </div>
         )}
-        {sorted.map((row) => (
-          <button
-            key={row.user.id}
-            onClick={() => navigate(`/chat/${row.user.id}`)}
-            className="w-full flex items-center gap-3 px-4 py-3 bg-background hover:bg-muted/50 transition text-left"
-          >
-            <div className="relative">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={row.user.photo_url ?? undefined} />
-                <AvatarFallback className="bg-accent text-primary font-semibold">
-                  {(row.user.name?.[0] || "?").toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              {row.user.is_online && (
-                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold text-foreground truncate">
-                  {row.user.name || "User"}
-                </p>
-                {row.lastAt && (
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {formatDistanceToNowStrict(new Date(row.lastAt), {
-                      addSuffix: false,
-                    })}
-                  </span>
+        {sorted.map((row) => {
+          const isOnline = onlineSet.has(row.user.id);
+          return (
+            <button
+              key={row.user.id}
+              onClick={() => navigate(`/chat/${row.user.id}`)}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-background hover:bg-muted/50 transition text-left"
+            >
+              <div className="relative">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={row.user.photo_url ?? undefined} />
+                  <AvatarFallback className="bg-accent text-primary font-semibold">
+                    {(row.user.name?.[0] || "?").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {isOnline && (
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
                 )}
               </div>
-              <div className="flex items-center justify-between gap-2 mt-0.5">
-                <p className="text-sm text-muted-foreground truncate">
-                  {row.lastMessage || "Tap to start chat"}
-                </p>
-                {row.unread > 0 && (
-                  <span className="bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center">
-                    {row.unread}
-                  </span>
-                )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-foreground truncate">
+                    {row.user.name || "User"}
+                  </p>
+                  {row.lastAt && (
+                    <span
+                      className={`text-xs shrink-0 ${
+                        row.unread > 0
+                          ? "text-primary font-semibold"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {formatDistanceToNowStrict(new Date(row.lastAt), {
+                        addSuffix: false,
+                      })}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                  <p className="text-sm text-muted-foreground truncate">
+                    {row.lastMessage || "Tap to start chat"}
+                  </p>
+                  {row.unread > 0 && (
+                    <span className="bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center">
+                      {row.unread}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </main>
     </div>
   );
