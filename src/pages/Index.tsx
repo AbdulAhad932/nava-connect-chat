@@ -257,7 +257,9 @@ const Index = () => {
         </Button>
       </header>
 
-      <div className="px-4 py-3 bg-background border-b sticky top-[72px] z-[5]">
+      <StatusBar />
+
+      <div className="px-4 py-3 bg-background border-b">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
