@@ -70,11 +70,19 @@ const Index = () => {
       (others ?? []).forEach((u: any) => {
         map[u.id] = { user: u, unread: 0 };
       });
+      const preview = (m: any) =>
+        m.media_type === "image"
+          ? "📷 Photo"
+          : m.media_type === "document"
+            ? `📎 ${m.media_name ?? "Document"}`
+            : m.media_type === "voice"
+              ? "🎤 Voice message"
+              : m.message ?? "";
       (msgs ?? []).forEach((m: any) => {
         const otherId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
         if (!map[otherId]) return;
         if (!map[otherId].lastMessage) {
-          map[otherId].lastMessage = m.message;
+          map[otherId].lastMessage = preview(m);
           map[otherId].lastAt = m.created_at;
         }
         if (m.receiver_id === user.id && !m.is_read) {
