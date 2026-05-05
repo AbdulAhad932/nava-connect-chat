@@ -7,8 +7,9 @@ import { NavaLogo } from "@/components/NavaLogo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, LogOut, Search } from "lucide-react";
+import { Loader2, LogOut, MessageSquarePlus, Search, Users } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
+import { StatusBar } from "@/components/StatusBar";
 
 interface Profile {
   id: string;
