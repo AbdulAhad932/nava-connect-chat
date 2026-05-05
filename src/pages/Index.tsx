@@ -26,12 +26,21 @@ interface ChatRow {
   unread: number;
 }
 
+interface GroupRow {
+  id: string;
+  name: string;
+  photo_url: string | null;
+  lastMessage?: string;
+  lastAt?: string;
+}
+
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [users, setUsers] = useState<Profile[]>([]);
   const [chats, setChats] = useState<Record<string, ChatRow>>({});
+  const [groups, setGroups] = useState<GroupRow[]>([]);
   const [search, setSearch] = useState("");
   const [checking, setChecking] = useState(true);
   const onlineSet = useGlobalPresence(user?.id);
