@@ -9,6 +9,10 @@ import Auth from "./pages/Auth.tsx";
 import ProfileSetup from "./pages/ProfileSetup.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import Chat from "./pages/Chat.tsx";
+import CreateGroup from "./pages/CreateGroup.tsx";
+import GroupChat from "./pages/GroupChat.tsx";
+import GroupInfo from "./pages/GroupInfo.tsx";
+import StatusViewer from "./pages/StatusViewer.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
