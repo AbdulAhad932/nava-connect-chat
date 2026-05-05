@@ -30,6 +30,10 @@ const App = () => (
             <Route path="/profile-setup" element={<ProfileSetup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/chat/:userId" element={<Chat />} />
+            <Route path="/new-group" element={<CreateGroup />} />
+            <Route path="/group/:groupId" element={<GroupChat />} />
+            <Route path="/group/:groupId/info" element={<GroupInfo />} />
+            <Route path="/status/:userId" element={<StatusViewer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
