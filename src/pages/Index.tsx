@@ -100,6 +100,50 @@ const Index = () => {
         }
       });
       setChats(map);
+
+      // Groups list
+      const { data: gms } = await supabase
+        .from("group_members")
+        .select("group_id")
+        .eq("user_id", user.id);
+      const gids = (gms ?? []).map((r: any) => r.group_id);
+      if (gids.length) {
+        const { data: gs } = await supabase
+          .from("groups")
+          .select("id,name,photo_url")
+          .in("id", gids);
+        const { data: gmsg } = await supabase
+          .from("messages")
+          .select("group_id,message,media_type,media_name,created_at")
+          .in("group_id", gids)
+          .order("created_at", { ascending: false });
+        const gmap: Record<string, { msg: string; at: string }> = {};
+        (gmsg ?? []).forEach((m: any) => {
+          if (gmap[m.group_id]) return;
+          gmap[m.group_id] = {
+            msg:
+              m.media_type === "image"
+                ? "📷 Photo"
+                : m.media_type === "document"
+                  ? `📎 ${m.media_name ?? "Document"}`
+                  : m.media_type === "voice"
+                    ? "🎤 Voice"
+                    : m.message ?? "",
+            at: m.created_at,
+          };
+        });
+        setGroups(
+          ((gs ?? []) as any[]).map((g) => ({
+            id: g.id,
+            name: g.name,
+            photo_url: g.photo_url,
+            lastMessage: gmap[g.id]?.msg,
+            lastAt: gmap[g.id]?.at,
+          }))
+        );
+      } else {
+        setGroups([]);
+      }
       setChecking(false);
     })();
   }, [user, loading, navigate]);
