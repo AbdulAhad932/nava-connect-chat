@@ -55,24 +55,20 @@ const CreateGroup = () => {
         .select()
         .single();
       if (error) throw error;
-      // creator as admin
-      const rows = [
-        { group_id: g.id, user_id: user.id, role: "admin" as const },
-        ...Array.from(selected).map((uid) => ({
-          group_id: g.id,
-          user_id: uid,
-          role: "member" as const,
-        })),
-      ];
       // creator first (RLS requires no members yet for self-insert)
       const { error: meErr } = await supabase
         .from("group_members")
-        .insert(rows[0]);
+        .insert({ group_id: g.id, user_id: user.id, role: "admin" });
       if (meErr) throw meErr;
-      if (rows.length > 1) {
+      if (selected.size > 0) {
+        const others = Array.from(selected).map((uid) => ({
+          group_id: g.id,
+          user_id: uid,
+          role: "member",
+        }));
         const { error: memErr } = await supabase
           .from("group_members")
-          .insert(rows.slice(1));
+          .insert(others);
         if (memErr) throw memErr;
       }
       toast.success("Group created!");
