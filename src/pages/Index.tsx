@@ -113,7 +113,14 @@ const Index = () => {
               ...prev,
               [otherId]: {
                 ...row,
-                lastMessage: m.message,
+                lastMessage:
+                  m.media_type === "image"
+                    ? "📷 Photo"
+                    : m.media_type === "document"
+                      ? `📎 ${m.media_name ?? "Document"}`
+                      : m.media_type === "voice"
+                        ? "🎤 Voice message"
+                        : m.message ?? "",
                 lastAt: m.created_at,
                 unread:
                   m.receiver_id === user.id ? row.unread + 1 : row.unread,
