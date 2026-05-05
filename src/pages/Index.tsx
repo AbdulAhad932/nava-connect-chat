@@ -7,8 +7,9 @@ import { NavaLogo } from "@/components/NavaLogo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, LogOut, Search } from "lucide-react";
+import { Loader2, LogOut, MessageSquarePlus, Search, Users } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
+import { StatusBar } from "@/components/StatusBar";
 
 interface Profile {
   id: string;
@@ -25,12 +26,21 @@ interface ChatRow {
   unread: number;
 }
 
+interface GroupRow {
+  id: string;
+  name: string;
+  photo_url: string | null;
+  lastMessage?: string;
+  lastAt?: string;
+}
+
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [users, setUsers] = useState<Profile[]>([]);
   const [chats, setChats] = useState<Record<string, ChatRow>>({});
+  const [groups, setGroups] = useState<GroupRow[]>([]);
   const [search, setSearch] = useState("");
   const [checking, setChecking] = useState(true);
   const onlineSet = useGlobalPresence(user?.id);
@@ -90,6 +100,50 @@ const Index = () => {
         }
       });
       setChats(map);
+
+      // Groups list
+      const { data: gms } = await supabase
+        .from("group_members")
+        .select("group_id")
+        .eq("user_id", user.id);
+      const gids = (gms ?? []).map((r: any) => r.group_id);
+      if (gids.length) {
+        const { data: gs } = await supabase
+          .from("groups")
+          .select("id,name,photo_url")
+          .in("id", gids);
+        const { data: gmsg } = await supabase
+          .from("messages")
+          .select("group_id,message,media_type,media_name,created_at")
+          .in("group_id", gids)
+          .order("created_at", { ascending: false });
+        const gmap: Record<string, { msg: string; at: string }> = {};
+        (gmsg ?? []).forEach((m: any) => {
+          if (gmap[m.group_id]) return;
+          gmap[m.group_id] = {
+            msg:
+              m.media_type === "image"
+                ? "📷 Photo"
+                : m.media_type === "document"
+                  ? `📎 ${m.media_name ?? "Document"}`
+                  : m.media_type === "voice"
+                    ? "🎤 Voice"
+                    : m.message ?? "",
+            at: m.created_at,
+          };
+        });
+        setGroups(
+          ((gs ?? []) as any[]).map((g) => ({
+            id: g.id,
+            name: g.name,
+            photo_url: g.photo_url,
+            lastMessage: gmap[g.id]?.msg,
+            lastAt: gmap[g.id]?.at,
+          }))
+        );
+      } else {
+        setGroups([]);
+      }
       setChecking(false);
     })();
   }, [user, loading, navigate]);
@@ -203,7 +257,9 @@ const Index = () => {
         </Button>
       </header>
 
-      <div className="px-4 py-3 bg-background border-b sticky top-[72px] z-[5]">
+      <StatusBar />
+
+      <div className="px-4 py-3 bg-background border-b">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -215,8 +271,46 @@ const Index = () => {
         </div>
       </div>
 
-      <main className="divide-y">
-        {sorted.length === 0 && (
+      <main className="divide-y pb-24">
+        {groups
+          .filter((g) => g.name.toLowerCase().includes(q))
+          .sort((a, b) => {
+            if (a.lastAt && b.lastAt) return a.lastAt < b.lastAt ? 1 : -1;
+            if (a.lastAt) return -1;
+            if (b.lastAt) return 1;
+            return a.name.localeCompare(b.name);
+          })
+          .map((g) => (
+            <button
+              key={g.id}
+              onClick={() => navigate(`/group/${g.id}`)}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-background hover:bg-muted/50 transition text-left"
+            >
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={g.photo_url ?? undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  <Users className="h-5 w-5" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold truncate">{g.name}</p>
+                  {g.lastAt && (
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {formatDistanceToNowStrict(new Date(g.lastAt), {
+                        addSuffix: false,
+                      })}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground truncate mt-0.5">
+                  {g.lastMessage || "Group created"}
+                </p>
+              </div>
+            </button>
+          ))}
+
+        {sorted.length === 0 && groups.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             Koi user nahi mila
           </div>
@@ -274,6 +368,14 @@ const Index = () => {
           );
         })}
       </main>
+
+      <Button
+        onClick={() => navigate("/new-group")}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-primary shadow-glow z-20"
+        size="icon"
+      >
+        <MessageSquarePlus className="h-6 w-6" />
+      </Button>
     </div>
   );
 };

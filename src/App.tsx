@@ -9,6 +9,10 @@ import Auth from "./pages/Auth.tsx";
 import ProfileSetup from "./pages/ProfileSetup.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import Chat from "./pages/Chat.tsx";
+import CreateGroup from "./pages/CreateGroup.tsx";
+import GroupChat from "./pages/GroupChat.tsx";
+import GroupInfo from "./pages/GroupInfo.tsx";
+import StatusViewer from "./pages/StatusViewer.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -26,6 +30,10 @@ const App = () => (
             <Route path="/profile-setup" element={<ProfileSetup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/chat/:userId" element={<Chat />} />
+            <Route path="/new-group" element={<CreateGroup />} />
+            <Route path="/group/:groupId" element={<GroupChat />} />
+            <Route path="/group/:groupId/info" element={<GroupInfo />} />
+            <Route path="/status/:userId" element={<StatusViewer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

@@ -14,10 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      group_members: {
+        Row: {
+          added_at: string
+          group_id: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          group_id: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          group_id?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          photo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           created_at: string
           duration_ms: number | null
+          group_id: string | null
           id: string
           is_delivered: boolean
           is_read: boolean
@@ -26,12 +86,13 @@ export type Database = {
           media_type: string
           media_url: string | null
           message: string | null
-          receiver_id: string
+          receiver_id: string | null
           sender_id: string
         }
         Insert: {
           created_at?: string
           duration_ms?: number | null
+          group_id?: string | null
           id?: string
           is_delivered?: boolean
           is_read?: boolean
@@ -40,12 +101,13 @@ export type Database = {
           media_type?: string
           media_url?: string | null
           message?: string | null
-          receiver_id: string
+          receiver_id?: string | null
           sender_id: string
         }
         Update: {
           created_at?: string
           duration_ms?: number | null
+          group_id?: string | null
           id?: string
           is_delivered?: boolean
           is_read?: boolean
@@ -54,10 +116,17 @@ export type Database = {
           media_type?: string
           media_url?: string | null
           message?: string | null
-          receiver_id?: string
+          receiver_id?: string | null
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_receiver_id_fkey"
             columns: ["receiver_id"]
@@ -107,12 +176,49 @@ export type Database = {
         }
         Relationships: []
       }
+      statuses: {
+        Row: {
+          caption: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          media_type: string
+          media_url: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_type: string
+          media_url: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_type?: string
+          media_url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_group_admin: {
+        Args: { _group: string; _user: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { _group: string; _user: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
