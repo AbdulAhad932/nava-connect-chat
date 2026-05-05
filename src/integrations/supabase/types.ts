@@ -17,28 +17,43 @@ export type Database = {
       messages: {
         Row: {
           created_at: string
+          duration_ms: number | null
           id: string
           is_delivered: boolean
           is_read: boolean
-          message: string
+          media_name: string | null
+          media_size: number | null
+          media_type: string
+          media_url: string | null
+          message: string | null
           receiver_id: string
           sender_id: string
         }
         Insert: {
           created_at?: string
+          duration_ms?: number | null
           id?: string
           is_delivered?: boolean
           is_read?: boolean
-          message: string
+          media_name?: string | null
+          media_size?: number | null
+          media_type?: string
+          media_url?: string | null
+          message?: string | null
           receiver_id: string
           sender_id: string
         }
         Update: {
           created_at?: string
+          duration_ms?: number | null
           id?: string
           is_delivered?: boolean
           is_read?: boolean
-          message?: string
+          media_name?: string | null
+          media_size?: number | null
+          media_type?: string
+          media_url?: string | null
+          message?: string | null
           receiver_id?: string
           sender_id?: string
         }
