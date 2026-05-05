@@ -271,8 +271,46 @@ const Index = () => {
         </div>
       </div>
 
-      <main className="divide-y">
-        {sorted.length === 0 && (
+      <main className="divide-y pb-24">
+        {groups
+          .filter((g) => g.name.toLowerCase().includes(q))
+          .sort((a, b) => {
+            if (a.lastAt && b.lastAt) return a.lastAt < b.lastAt ? 1 : -1;
+            if (a.lastAt) return -1;
+            if (b.lastAt) return 1;
+            return a.name.localeCompare(b.name);
+          })
+          .map((g) => (
+            <button
+              key={g.id}
+              onClick={() => navigate(`/group/${g.id}`)}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-background hover:bg-muted/50 transition text-left"
+            >
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={g.photo_url ?? undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  <Users className="h-5 w-5" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold truncate">{g.name}</p>
+                  {g.lastAt && (
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {formatDistanceToNowStrict(new Date(g.lastAt), {
+                        addSuffix: false,
+                      })}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground truncate mt-0.5">
+                  {g.lastMessage || "Group created"}
+                </p>
+              </div>
+            </button>
+          ))}
+
+        {sorted.length === 0 && groups.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             Koi user nahi mila
           </div>
@@ -330,6 +368,14 @@ const Index = () => {
           );
         })}
       </main>
+
+      <Button
+        onClick={() => navigate("/new-group")}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-primary shadow-glow z-20"
+        size="icon"
+      >
+        <MessageSquarePlus className="h-6 w-6" />
+      </Button>
     </div>
   );
 };
