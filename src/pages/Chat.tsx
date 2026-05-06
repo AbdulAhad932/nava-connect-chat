@@ -425,6 +425,34 @@ const Chat = () => {
             {statusText}
           </p>
         </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() =>
+            startCall(
+              { id: other.id, name: other.name, photo_url: other.photo_url },
+              "audio"
+            )
+          }
+          className="text-primary-foreground hover:bg-primary-foreground/10 h-9 w-9"
+          aria-label="Voice call"
+        >
+          <Phone className="h-5 w-5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() =>
+            startCall(
+              { id: other.id, name: other.name, photo_url: other.photo_url },
+              "video"
+            )
+          }
+          className="text-primary-foreground hover:bg-primary-foreground/10 h-9 w-9"
+          aria-label="Video call"
+        >
+          <Video className="h-5 w-5" />
+        </Button>
       </header>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
