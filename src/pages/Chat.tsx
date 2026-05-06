@@ -16,11 +16,14 @@ import {
   Mic,
   Paperclip,
   Pause,
+  Phone,
   Play,
   Send,
   Square,
+  Video,
   X,
 } from "lucide-react";
+import { useCall } from "@/contexts/CallContext";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import {
