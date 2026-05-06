@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { useCall } from "@/contexts/CallContext";
+import { MessageReactions } from "@/components/MessageReactions";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -457,113 +458,122 @@ const Chat = () => {
         </Button>
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
-        {messages.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-10">
-            Koi message nahi. Pehla message bhejein 👋
-          </p>
-        )}
-        {messages.map((m) => {
-          const mine = m.sender_id === user!.id;
-          const url = m.media_url ? signed[m.media_url] : undefined;
-          return (
-            <div
-              key={m.id}
-              className={`flex ${mine ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[78%] rounded-2xl px-2 py-2 shadow-sm ${
-                  mine
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-background text-foreground rounded-bl-sm"
-                }`}
-              >
-                {m.media_type === "image" && (
-                  <div className="mb-1">
-                    {url ? (
-                      <a href={url} target="_blank" rel="noreferrer">
-                        <img
-                          src={url}
-                          alt={m.media_name ?? "image"}
-                          className="rounded-lg max-h-64 object-cover"
-                        />
-                      </a>
-                    ) : (
-                      <div className="h-40 w-56 rounded-lg bg-muted/40 flex items-center justify-center">
-                        <Loader2 className="h-5 w-5 animate-spin opacity-70" />
-                      </div>
-                    )}
-                  </div>
-                )}
-                {m.media_type === "document" && (
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`flex items-center gap-2 rounded-lg px-2 py-2 mb-1 ${
-                      mine ? "bg-primary-foreground/10" : "bg-muted/60"
-                    }`}
+      <MessageReactions messageIds={messages.map((m) => m.id)}>
+        {({ bind, renderReactions, pickerNode }) => (
+          <>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
+              {messages.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-10">
+                  Koi message nahi. Pehla message bhejein 👋
+                </p>
+              )}
+              {messages.map((m) => {
+                const mine = m.sender_id === user!.id;
+                const url = m.media_url ? signed[m.media_url] : undefined;
+                return (
+                  <div
+                    key={m.id}
+                    className={`flex flex-col ${mine ? "items-end" : "items-start"}`}
                   >
-                    <FileText className="h-6 w-6 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate max-w-[180px]">
-                        {m.media_name || "file"}
-                      </p>
-                      <p className="text-[11px] opacity-75">
-                        {fmtSize(m.media_size)}
-                      </p>
+                    <div
+                      {...bind(m.id)}
+                      className={`max-w-[78%] rounded-2xl px-2 py-2 shadow-sm select-none touch-none ${
+                        mine
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-background text-foreground rounded-bl-sm"
+                      }`}
+                    >
+                      {m.media_type === "image" && (
+                        <div className="mb-1">
+                          {url ? (
+                            <a href={url} target="_blank" rel="noreferrer">
+                              <img
+                                src={url}
+                                alt={m.media_name ?? "image"}
+                                className="rounded-lg max-h-64 object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <div className="h-40 w-56 rounded-lg bg-muted/40 flex items-center justify-center">
+                              <Loader2 className="h-5 w-5 animate-spin opacity-70" />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {m.media_type === "document" && (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`flex items-center gap-2 rounded-lg px-2 py-2 mb-1 ${
+                            mine ? "bg-primary-foreground/10" : "bg-muted/60"
+                          }`}
+                        >
+                          <FileText className="h-6 w-6 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate max-w-[180px]">
+                              {m.media_name || "file"}
+                            </p>
+                            <p className="text-[11px] opacity-75">
+                              {fmtSize(m.media_size)}
+                            </p>
+                          </div>
+                        </a>
+                      )}
+                      {m.media_type === "voice" && (
+                        <VoicePlayer
+                          url={url}
+                          durationMs={m.duration_ms ?? 0}
+                          mine={mine}
+                        />
+                      )}
+                      {m.message && (
+                        <p className="text-sm whitespace-pre-wrap break-words px-1">
+                          {m.message}
+                        </p>
+                      )}
+                      <div
+                        className={`flex items-center gap-1 justify-end mt-0.5 text-[10px] px-1 ${
+                          mine
+                            ? "text-primary-foreground/80"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        <span>{format(new Date(m.created_at), "HH:mm")}</span>
+                        {mine &&
+                          (m.is_read ? (
+                            <CheckCheck className="h-3.5 w-3.5 text-sky-300" />
+                          ) : m.is_delivered ? (
+                            <CheckCheck className="h-3.5 w-3.5" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          ))}
+                      </div>
                     </div>
-                  </a>
-                )}
-                {m.media_type === "voice" && (
-                  <VoicePlayer
-                    url={url}
-                    durationMs={m.duration_ms ?? 0}
-                    mine={mine}
-                  />
-                )}
-                {m.message && (
-                  <p className="text-sm whitespace-pre-wrap break-words px-1">
-                    {m.message}
-                  </p>
-                )}
-                <div
-                  className={`flex items-center gap-1 justify-end mt-0.5 text-[10px] px-1 ${
-                    mine
-                      ? "text-primary-foreground/80"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  <span>{format(new Date(m.created_at), "HH:mm")}</span>
-                  {mine &&
-                    (m.is_read ? (
-                      <CheckCheck className="h-3.5 w-3.5 text-sky-300" />
-                    ) : m.is_delivered ? (
-                      <CheckCheck className="h-3.5 w-3.5" />
-                    ) : (
-                      <Check className="h-3.5 w-3.5" />
-                    ))}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                    {renderReactions(m.id, mine)}
+                  </div>
+                );
+              })}
 
-        {otherTyping && (
-          <div className="flex justify-start">
-            <div className="bg-background text-foreground rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm">
-              <div className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary/70 animate-bounce [animation-delay:-0.3s]" />
-                <span className="h-1.5 w-1.5 rounded-full bg-primary/70 animate-bounce [animation-delay:-0.15s]" />
-                <span className="h-1.5 w-1.5 rounded-full bg-primary/70 animate-bounce" />
-                <span className="ml-1 text-[11px] text-muted-foreground">
-                  {(other.name?.split(" ")[0] || "User")} is typing...
-                </span>
-              </div>
+              {otherTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-background text-foreground rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary/70 animate-bounce [animation-delay:-0.3s]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary/70 animate-bounce [animation-delay:-0.15s]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary/70 animate-bounce" />
+                      <span className="ml-1 text-[11px] text-muted-foreground">
+                        {(other.name?.split(" ")[0] || "User")} is typing...
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+            {pickerNode}
+          </>
         )}
-      </div>
+      </MessageReactions>
 
       <input
         ref={imageInputRef}
