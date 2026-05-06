@@ -21,6 +21,28 @@ import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
+const AppShell = () => {
+  const { user } = useAuth();
+  useGlobalNotifications(user?.id);
+  return (
+    <CallProvider>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/profile-setup" element={<ProfileSetup />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/chat/:userId" element={<Chat />} />
+        <Route path="/new-group" element={<CreateGroup />} />
+        <Route path="/group/:groupId" element={<GroupChat />} />
+        <Route path="/group/:groupId/info" element={<GroupInfo />} />
+        <Route path="/status/:userId" element={<StatusViewer />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <CallScreen />
+    </CallProvider>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -28,18 +50,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/profile-setup" element={<ProfileSetup />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/chat/:userId" element={<Chat />} />
-            <Route path="/new-group" element={<CreateGroup />} />
-            <Route path="/group/:groupId" element={<GroupChat />} />
-            <Route path="/group/:groupId/info" element={<GroupInfo />} />
-            <Route path="/status/:userId" element={<StatusViewer />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppShell />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
