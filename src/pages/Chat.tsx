@@ -97,6 +97,8 @@ const Chat = () => {
 
   const isOtherOnline = userId ? onlineSet.has(userId) : false;
 
+  const { startCall } = useCall();
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
