@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { useCall } from "@/contexts/CallContext";
+import { MessageReactions } from "@/components/MessageReactions";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import {
