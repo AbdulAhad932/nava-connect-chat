@@ -334,6 +334,8 @@ const Chat = () => {
           contentType: (file as File).type || "application/octet-stream",
         });
       if (upErr) throw upErr;
+      const replyId = replyTo?.id ?? null;
+      setReplyTo(null);
       const { error: insErr } = await supabase.from("messages").insert({
         sender_id: user.id,
         receiver_id: userId,
@@ -343,6 +345,7 @@ const Chat = () => {
         media_name: name,
         media_size: (file as File).size ?? file.size,
         duration_ms: durationMs ?? null,
+        reply_to_id: replyId,
       });
       if (insErr) throw insErr;
     } catch (e: any) {
