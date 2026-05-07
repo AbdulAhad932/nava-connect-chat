@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_users: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       call_history: {
         Row: {
           call_type: string
@@ -210,6 +231,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          about: string | null
           created_at: string
           id: string
           is_online: boolean
@@ -217,9 +239,14 @@ export type Database = {
           name: string | null
           phone: string | null
           photo_url: string | null
+          privacy_about: string
+          privacy_last_seen: string
+          privacy_photo: string
+          theme: string
           updated_at: string
         }
         Insert: {
+          about?: string | null
           created_at?: string
           id: string
           is_online?: boolean
@@ -227,9 +254,14 @@ export type Database = {
           name?: string | null
           phone?: string | null
           photo_url?: string | null
+          privacy_about?: string
+          privacy_last_seen?: string
+          privacy_photo?: string
+          theme?: string
           updated_at?: string
         }
         Update: {
+          about?: string | null
           created_at?: string
           id?: string
           is_online?: boolean
@@ -237,6 +269,10 @@ export type Database = {
           name?: string | null
           phone?: string | null
           photo_url?: string | null
+          privacy_about?: string
+          privacy_last_seen?: string
+          privacy_photo?: string
+          theme?: string
           updated_at?: string
         }
         Relationships: []
