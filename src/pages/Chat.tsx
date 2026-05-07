@@ -94,6 +94,10 @@ const Chat = () => {
   const [signed, setSigned] = useState<Record<string, string>>({});
   const [recording, setRecording] = useState(false);
   const [recElapsed, setRecElapsed] = useState(0);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
+  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const onlineSet = useGlobalPresence(user?.id);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -105,6 +109,8 @@ const Chat = () => {
   const recChunksRef = useRef<Blob[]>([]);
   const recStartRef = useRef<number>(0);
   const recTimerRef = useRef<number | null>(null);
+  const swipeRef = useRef<{ id: string; x: number; dx: number } | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<{ id: string; dx: number } | null>(null);
 
   const isOtherOnline = userId ? onlineSet.has(userId) : false;
 
