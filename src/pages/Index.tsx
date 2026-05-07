@@ -7,7 +7,7 @@ import { NavaLogo } from "@/components/NavaLogo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, LogOut, MessageSquarePlus, Search, Users } from "lucide-react";
+import { Loader2, LogOut, MessageSquarePlus, Search, Settings as SettingsIcon, Users } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { StatusBar } from "@/components/StatusBar";
 
@@ -238,12 +238,22 @@ const Index = () => {
             Welcome, {profile?.name?.trim() || "User"}
           </p>
         </div>
-        <Avatar className="h-10 w-10 border-2 border-primary-foreground/30">
-          <AvatarImage src={profile.photo_url ?? undefined} />
-          <AvatarFallback className="bg-primary-dark text-primary-foreground">
-            {(profile?.name?.trim()?.[0] || "U").toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <button onClick={() => navigate("/settings")} className="rounded-full">
+          <Avatar className="h-10 w-10 border-2 border-primary-foreground/30">
+            <AvatarImage src={profile.photo_url ?? undefined} />
+            <AvatarFallback className="bg-primary-dark text-primary-foreground">
+              {(profile?.name?.trim()?.[0] || "U").toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </button>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => navigate("/settings")}
+          className="text-primary-foreground hover:bg-primary-foreground/10"
+        >
+          <SettingsIcon className="h-5 w-5" />
+        </Button>
         <Button
           size="icon"
           variant="ghost"
