@@ -7,7 +7,7 @@ import { NavaLogo } from "@/components/NavaLogo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, LogOut, MessageSquarePlus, Search, Settings as SettingsIcon, Users } from "lucide-react";
+import { Loader2, LogOut, MessageSquarePlus, Search, Settings as SettingsIcon, Star, Users } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { StatusBar } from "@/components/StatusBar";
 
@@ -246,6 +246,15 @@ const Index = () => {
             </AvatarFallback>
           </Avatar>
         </button>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => navigate("/starred")}
+          className="text-primary-foreground hover:bg-primary-foreground/10"
+          aria-label="Starred messages"
+        >
+          <Star className="h-5 w-5" />
+        </Button>
         <Button
           size="icon"
           variant="ghost"

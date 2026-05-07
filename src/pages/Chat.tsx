@@ -10,27 +10,34 @@ import {
   ArrowLeft,
   Check,
   CheckCheck,
+  CornerUpLeft,
   FileText,
+  Forward,
   Image as ImageIcon,
   Loader2,
   Mic,
+  MoreVertical,
   Paperclip,
   Pause,
   Phone,
   Play,
   Send,
-  Square,
+  Star,
+  StarOff,
+  Trash2,
   Video,
   X,
 } from "lucide-react";
 import { useCall } from "@/contexts/CallContext";
 import { MessageReactions } from "@/components/MessageReactions";
+import { ForwardDialog } from "@/components/ForwardDialog";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -49,6 +56,9 @@ interface Message {
   media_name: string | null;
   media_size: number | null;
   duration_ms: number | null;
+  reply_to_id: string | null;
+  forwarded_from_id: string | null;
+  is_deleted_for_everyone: boolean;
 }
 
 interface Profile {
@@ -84,6 +94,10 @@ const Chat = () => {
   const [signed, setSigned] = useState<Record<string, string>>({});
   const [recording, setRecording] = useState(false);
   const [recElapsed, setRecElapsed] = useState(0);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
+  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const onlineSet = useGlobalPresence(user?.id);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -95,6 +109,8 @@ const Chat = () => {
   const recChunksRef = useRef<Blob[]>([]);
   const recStartRef = useRef<number>(0);
   const recTimerRef = useRef<number | null>(null);
+  const swipeRef = useRef<{ id: string; x: number; dx: number } | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<{ id: string; dx: number } | null>(null);
 
   const isOtherOnline = userId ? onlineSet.has(userId) : false;
 
@@ -123,6 +139,25 @@ const Chat = () => {
         )
         .order("created_at", { ascending: true });
       setMessages((msgs ?? []) as Message[]);
+
+      // Load own deletions + stars
+      const msgIds = (msgs ?? []).map((m: any) => m.id);
+      if (msgIds.length) {
+        const [{ data: dels }, { data: stars }] = await Promise.all([
+          supabase
+            .from("message_deletions")
+            .select("message_id")
+            .eq("user_id", user.id)
+            .in("message_id", msgIds),
+          supabase
+            .from("starred_messages")
+            .select("message_id")
+            .eq("user_id", user.id)
+            .in("message_id", msgIds),
+        ]);
+        setDeletedIds(new Set((dels ?? []).map((d: any) => d.message_id)));
+        setStarredIds(new Set((stars ?? []).map((s: any) => s.message_id)));
+      }
 
       await supabase
         .from("messages")
@@ -264,11 +299,14 @@ const Chat = () => {
     const body = text.trim();
     setText("");
     stopTyping();
+    const replyId = replyTo?.id ?? null;
+    setReplyTo(null);
     const { error } = await supabase.from("messages").insert({
       sender_id: user.id,
       receiver_id: userId,
       message: body,
       media_type: "text",
+      reply_to_id: replyId,
     });
     setSending(false);
     if (error) {
@@ -296,6 +334,8 @@ const Chat = () => {
           contentType: (file as File).type || "application/octet-stream",
         });
       if (upErr) throw upErr;
+      const replyId = replyTo?.id ?? null;
+      setReplyTo(null);
       const { error: insErr } = await supabase.from("messages").insert({
         sender_id: user.id,
         receiver_id: userId,
@@ -305,6 +345,7 @@ const Chat = () => {
         media_name: name,
         media_size: (file as File).size ?? file.size,
         duration_ms: durationMs ?? null,
+        reply_to_id: replyId,
       });
       if (insErr) throw insErr;
     } catch (e: any) {
@@ -384,6 +425,78 @@ const Chat = () => {
     setRecElapsed(0);
   };
 
+  const deleteForMe = async (m: Message) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("message_deletions")
+      .insert({ message_id: m.id, user_id: user.id });
+    if (error) return toast.error(error.message);
+    setDeletedIds((p) => new Set(p).add(m.id));
+  };
+
+  const deleteForEveryone = async (m: Message) => {
+    if (!user) return;
+    const ageMs = Date.now() - new Date(m.created_at).getTime();
+    if (ageMs > 60 * 60 * 1000) {
+      toast.error("Time limit (1 hour) exceeded");
+      return;
+    }
+    const { error } = await supabase
+      .from("messages")
+      .update({
+        is_deleted_for_everyone: true,
+        message: "",
+        media_url: null,
+        media_name: null,
+      })
+      .eq("id", m.id);
+    if (error) toast.error(error.message);
+  };
+
+  const toggleStar = async (m: Message) => {
+    if (!user) return;
+    if (starredIds.has(m.id)) {
+      const { error } = await supabase
+        .from("starred_messages")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("message_id", m.id);
+      if (error) return toast.error(error.message);
+      setStarredIds((p) => {
+        const n = new Set(p);
+        n.delete(m.id);
+        return n;
+      });
+    } else {
+      const { error } = await supabase
+        .from("starred_messages")
+        .insert({ message_id: m.id, user_id: user.id });
+      if (error) return toast.error(error.message);
+      setStarredIds((p) => new Set(p).add(m.id));
+      toast.success("Starred");
+    }
+  };
+
+  const onTouchStart = (e: React.TouchEvent, id: string) => {
+    swipeRef.current = { id, x: e.touches[0].clientX, dx: 0 };
+  };
+  const onTouchMove = (e: React.TouchEvent, id: string) => {
+    if (!swipeRef.current || swipeRef.current.id !== id) return;
+    const dx = e.touches[0].clientX - swipeRef.current.x;
+    if (dx > 0 && dx < 120) {
+      swipeRef.current.dx = dx;
+      setSwipeOffset({ id, dx });
+    }
+  };
+  const onTouchEnd = (m: Message) => {
+    if (swipeRef.current && swipeRef.current.dx > 60) setReplyTo(m);
+    swipeRef.current = null;
+    setSwipeOffset(null);
+  };
+
+  const visibleMessages = messages.filter((m) => !deletedIds.has(m.id));
+  const msgById = new Map(messages.map((m) => [m.id, m]));
+
   if (loading || !ready || !other) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -458,99 +571,197 @@ const Chat = () => {
         </Button>
       </header>
 
-      <MessageReactions messageIds={messages.map((m) => m.id)}>
+      <MessageReactions messageIds={visibleMessages.map((m) => m.id)}>
         {({ bind, renderReactions, pickerNode }) => (
           <>
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
-              {messages.length === 0 && (
+              {visibleMessages.length === 0 && (
                 <p className="text-center text-sm text-muted-foreground py-10">
                   Koi message nahi. Pehla message bhejein 👋
                 </p>
               )}
-              {messages.map((m) => {
+              {visibleMessages.map((m) => {
                 const mine = m.sender_id === user!.id;
                 const url = m.media_url ? signed[m.media_url] : undefined;
+                const deleted = m.is_deleted_for_everyone;
+                const replied = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
+                const isStarred = starredIds.has(m.id);
+                const offsetDx = swipeOffset?.id === m.id ? swipeOffset.dx : 0;
+                const ageMs = Date.now() - new Date(m.created_at).getTime();
+                const canDeleteForEveryone = mine && !deleted && ageMs < 60 * 60 * 1000;
                 return (
                   <div
                     key={m.id}
                     className={`flex flex-col ${mine ? "items-end" : "items-start"}`}
                   >
-                    <div
-                      {...bind(m.id)}
-                      className={`max-w-[78%] rounded-2xl px-2 py-2 shadow-sm select-none touch-none ${
-                        mine
-                          ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "bg-background text-foreground rounded-bl-sm"
-                      }`}
-                    >
-                      {m.media_type === "image" && (
-                        <div className="mb-1">
-                          {url ? (
-                            <a href={url} target="_blank" rel="noreferrer">
-                              <img
-                                src={url}
-                                alt={m.media_name ?? "image"}
-                                className="rounded-lg max-h-64 object-cover"
-                              />
-                            </a>
-                          ) : (
-                            <div className="h-40 w-56 rounded-lg bg-muted/40 flex items-center justify-center">
-                              <Loader2 className="h-5 w-5 animate-spin opacity-70" />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {m.media_type === "document" && (
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={`flex items-center gap-2 rounded-lg px-2 py-2 mb-1 ${
-                            mine ? "bg-primary-foreground/10" : "bg-muted/60"
-                          }`}
-                        >
-                          <FileText className="h-6 w-6 shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate max-w-[180px]">
-                              {m.media_name || "file"}
-                            </p>
-                            <p className="text-[11px] opacity-75">
-                              {fmtSize(m.media_size)}
-                            </p>
-                          </div>
-                        </a>
-                      )}
-                      {m.media_type === "voice" && (
-                        <VoicePlayer
-                          url={url}
-                          durationMs={m.duration_ms ?? 0}
-                          mine={mine}
-                        />
-                      )}
-                      {m.message && (
-                        <p className="text-sm whitespace-pre-wrap break-words px-1">
-                          {m.message}
-                        </p>
+                    <div className="relative w-full flex" style={{ justifyContent: mine ? "flex-end" : "flex-start" }}>
+                      {offsetDx > 20 && (
+                        <CornerUpLeft className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-primary opacity-70" />
                       )}
                       <div
-                        className={`flex items-center gap-1 justify-end mt-0.5 text-[10px] px-1 ${
-                          mine
-                            ? "text-primary-foreground/80"
-                            : "text-muted-foreground"
-                        }`}
+                        onTouchStart={(e) => onTouchStart(e, m.id)}
+                        onTouchMove={(e) => onTouchMove(e, m.id)}
+                        onTouchEnd={() => onTouchEnd(m)}
+                        style={{ transform: `translateX(${offsetDx}px)`, transition: offsetDx ? "none" : "transform 0.2s" }}
+                        className="group relative max-w-[78%]"
                       >
-                        <span>{format(new Date(m.created_at), "HH:mm")}</span>
-                        {mine &&
-                          (m.is_read ? (
-                            <CheckCheck className="h-3.5 w-3.5 text-sky-300" />
-                          ) : m.is_delivered ? (
-                            <CheckCheck className="h-3.5 w-3.5" />
+                        <div
+                          {...(deleted ? {} : bind(m.id))}
+                          className={`rounded-2xl px-2 py-2 shadow-sm select-none ${deleted ? "opacity-70 italic" : "touch-none"} ${
+                            mine
+                              ? "bg-primary text-primary-foreground rounded-br-sm"
+                              : "bg-background text-foreground rounded-bl-sm"
+                          }`}
+                        >
+                          {m.forwarded_from_id && !deleted && (
+                            <p className={`text-[11px] flex items-center gap-1 mb-1 px-1 italic ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                              <Forward className="h-3 w-3" /> Forwarded
+                            </p>
+                          )}
+                          {replied && !deleted && (
+                            <div className={`mb-1 px-2 py-1 rounded-md border-l-2 text-xs ${mine ? "bg-primary-foreground/10 border-primary-foreground/60" : "bg-muted/60 border-primary"}`}>
+                              <p className="font-semibold opacity-80">
+                                {replied.sender_id === user!.id ? "You" : (other.name ?? "User")}
+                              </p>
+                              <p className="truncate opacity-80 max-w-[220px]">
+                                {replied.is_deleted_for_everyone
+                                  ? "deleted message"
+                                  : replied.media_type === "image"
+                                    ? "📷 Photo"
+                                    : replied.media_type === "document"
+                                      ? `📎 ${replied.media_name ?? "Document"}`
+                                      : replied.media_type === "voice"
+                                        ? "🎤 Voice message"
+                                        : replied.message ?? ""}
+                              </p>
+                            </div>
+                          )}
+                          {deleted ? (
+                            <p className="text-sm px-1 flex items-center gap-1">
+                              <Trash2 className="h-3.5 w-3.5" /> This message was deleted
+                            </p>
                           ) : (
-                            <Check className="h-3.5 w-3.5" />
-                          ))}
+                            <>
+                              {m.media_type === "image" && (
+                                <div className="mb-1">
+                                  {url ? (
+                                    <a href={url} target="_blank" rel="noreferrer">
+                                      <img
+                                        src={url}
+                                        alt={m.media_name ?? "image"}
+                                        className="rounded-lg max-h-64 object-cover"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <div className="h-40 w-56 rounded-lg bg-muted/40 flex items-center justify-center">
+                                      <Loader2 className="h-5 w-5 animate-spin opacity-70" />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {m.media_type === "document" && (
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className={`flex items-center gap-2 rounded-lg px-2 py-2 mb-1 ${
+                                    mine ? "bg-primary-foreground/10" : "bg-muted/60"
+                                  }`}
+                                >
+                                  <FileText className="h-6 w-6 shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium truncate max-w-[180px]">
+                                      {m.media_name || "file"}
+                                    </p>
+                                    <p className="text-[11px] opacity-75">
+                                      {fmtSize(m.media_size)}
+                                    </p>
+                                  </div>
+                                </a>
+                              )}
+                              {m.media_type === "voice" && (
+                                <VoicePlayer
+                                  url={url}
+                                  durationMs={m.duration_ms ?? 0}
+                                  mine={mine}
+                                />
+                              )}
+                              {m.message && (
+                                <p className="text-sm whitespace-pre-wrap break-words px-1">
+                                  {m.message}
+                                </p>
+                              )}
+                            </>
+                          )}
+                          <div
+                            className={`flex items-center gap-1 justify-end mt-0.5 text-[10px] px-1 ${
+                              mine
+                                ? "text-primary-foreground/80"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {isStarred && <Star className="h-3 w-3 fill-current" />}
+                            <span>{format(new Date(m.created_at), "HH:mm")}</span>
+                            {mine && !deleted &&
+                              (m.is_read ? (
+                                <CheckCheck className="h-3.5 w-3.5 text-sky-300" />
+                              ) : m.is_delivered ? (
+                                <CheckCheck className="h-3.5 w-3.5" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5" />
+                              ))}
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className={`absolute top-1 ${mine ? "-left-7" : "-right-7"} opacity-0 group-hover:opacity-100 focus:opacity-100 transition p-1 rounded-full bg-background/80 border shadow-sm`}
+                              aria-label="Message actions"
+                            >
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align={mine ? "end" : "start"}>
+                            {!deleted && (
+                              <DropdownMenuItem onClick={() => setReplyTo(m)}>
+                                <CornerUpLeft className="h-4 w-4 mr-2" /> Reply
+                              </DropdownMenuItem>
+                            )}
+                            {!deleted && (
+                              <DropdownMenuItem onClick={() => setForwardMsg(m)}>
+                                <Forward className="h-4 w-4 mr-2" /> Forward
+                              </DropdownMenuItem>
+                            )}
+                            {!deleted && (
+                              <DropdownMenuItem onClick={() => toggleStar(m)}>
+                                {isStarred ? (
+                                  <>
+                                    <StarOff className="h-4 w-4 mr-2" /> Unstar
+                                  </>
+                                ) : (
+                                  <>
+                                    <Star className="h-4 w-4 mr-2" /> Star
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => deleteForMe(m)}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete for me
+                            </DropdownMenuItem>
+                            {canDeleteForEveryone && (
+                              <DropdownMenuItem
+                                onClick={() => deleteForEveryone(m)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete for everyone
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-                    {renderReactions(m.id, mine)}
+                    {!deleted && renderReactions(m.id, mine)}
                   </div>
                 );
               })}
@@ -588,6 +799,29 @@ const Chat = () => {
         className="hidden"
         onChange={onPickFile}
       />
+
+      {replyTo && (
+        <div className="bg-background border-t px-3 py-2 flex items-start gap-2">
+          <div className="w-1 self-stretch rounded bg-primary" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-primary">
+              Replying to {replyTo.sender_id === user!.id ? "yourself" : (other.name ?? "User")}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {replyTo.media_type === "image"
+                ? "📷 Photo"
+                : replyTo.media_type === "document"
+                  ? `📎 ${replyTo.media_name ?? "Document"}`
+                  : replyTo.media_type === "voice"
+                    ? "🎤 Voice message"
+                    : replyTo.message ?? ""}
+            </p>
+          </div>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setReplyTo(null)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       {recording ? (
         <div className="bg-background border-t px-3 py-2 flex items-center gap-3">
@@ -689,6 +923,12 @@ const Chat = () => {
           )}
         </div>
       )}
+
+      <ForwardDialog
+        open={!!forwardMsg}
+        onOpenChange={(v) => !v && setForwardMsg(null)}
+        message={forwardMsg}
+      />
     </div>
   );
 };

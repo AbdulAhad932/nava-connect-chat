@@ -127,6 +127,27 @@ export type Database = {
         }
         Relationships: []
       }
+      message_deletions: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_reactions: {
         Row: {
           created_at: string
@@ -163,8 +184,10 @@ export type Database = {
         Row: {
           created_at: string
           duration_ms: number | null
+          forwarded_from_id: string | null
           group_id: string | null
           id: string
+          is_deleted_for_everyone: boolean
           is_delivered: boolean
           is_read: boolean
           media_name: string | null
@@ -173,13 +196,16 @@ export type Database = {
           media_url: string | null
           message: string | null
           receiver_id: string | null
+          reply_to_id: string | null
           sender_id: string
         }
         Insert: {
           created_at?: string
           duration_ms?: number | null
+          forwarded_from_id?: string | null
           group_id?: string | null
           id?: string
+          is_deleted_for_everyone?: boolean
           is_delivered?: boolean
           is_read?: boolean
           media_name?: string | null
@@ -188,13 +214,16 @@ export type Database = {
           media_url?: string | null
           message?: string | null
           receiver_id?: string | null
+          reply_to_id?: string | null
           sender_id: string
         }
         Update: {
           created_at?: string
           duration_ms?: number | null
+          forwarded_from_id?: string | null
           group_id?: string | null
           id?: string
+          is_deleted_for_everyone?: boolean
           is_delivered?: boolean
           is_read?: boolean
           media_name?: string | null
@@ -203,6 +232,7 @@ export type Database = {
           media_url?: string | null
           message?: string | null
           receiver_id?: string | null
+          reply_to_id?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -274,6 +304,27 @@ export type Database = {
           privacy_photo?: string
           theme?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      starred_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          user_id?: string
         }
         Relationships: []
       }

@@ -19,6 +19,7 @@ import GroupChat from "./pages/GroupChat.tsx";
 import GroupInfo from "./pages/GroupInfo.tsx";
 import StatusViewer from "./pages/StatusViewer.tsx";
 import Settings from "./pages/Settings.tsx";
+import Starred from "./pages/Starred.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const AppShell = () => {
         <Route path="/group/:groupId/info" element={<GroupInfo />} />
         <Route path="/status/:userId" element={<StatusViewer />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/starred" element={<Starred />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <CallScreen />
