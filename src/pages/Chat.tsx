@@ -425,7 +425,78 @@ const Chat = () => {
     setRecElapsed(0);
   };
 
-  if (loading || !ready || !other) {
+  const deleteForMe = async (m: Message) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("message_deletions")
+      .insert({ message_id: m.id, user_id: user.id });
+    if (error) return toast.error(error.message);
+    setDeletedIds((p) => new Set(p).add(m.id));
+  };
+
+  const deleteForEveryone = async (m: Message) => {
+    if (!user) return;
+    const ageMs = Date.now() - new Date(m.created_at).getTime();
+    if (ageMs > 60 * 60 * 1000) {
+      toast.error("Time limit (1 hour) exceeded");
+      return;
+    }
+    const { error } = await supabase
+      .from("messages")
+      .update({
+        is_deleted_for_everyone: true,
+        message: "",
+        media_url: null,
+        media_name: null,
+      })
+      .eq("id", m.id);
+    if (error) toast.error(error.message);
+  };
+
+  const toggleStar = async (m: Message) => {
+    if (!user) return;
+    if (starredIds.has(m.id)) {
+      const { error } = await supabase
+        .from("starred_messages")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("message_id", m.id);
+      if (error) return toast.error(error.message);
+      setStarredIds((p) => {
+        const n = new Set(p);
+        n.delete(m.id);
+        return n;
+      });
+    } else {
+      const { error } = await supabase
+        .from("starred_messages")
+        .insert({ message_id: m.id, user_id: user.id });
+      if (error) return toast.error(error.message);
+      setStarredIds((p) => new Set(p).add(m.id));
+      toast.success("Starred");
+    }
+  };
+
+  const onTouchStart = (e: React.TouchEvent, id: string) => {
+    swipeRef.current = { id, x: e.touches[0].clientX, dx: 0 };
+  };
+  const onTouchMove = (e: React.TouchEvent, id: string) => {
+    if (!swipeRef.current || swipeRef.current.id !== id) return;
+    const dx = e.touches[0].clientX - swipeRef.current.x;
+    if (dx > 0 && dx < 120) {
+      swipeRef.current.dx = dx;
+      setSwipeOffset({ id, dx });
+    }
+  };
+  const onTouchEnd = (m: Message) => {
+    if (swipeRef.current && swipeRef.current.dx > 60) setReplyTo(m);
+    swipeRef.current = null;
+    setSwipeOffset(null);
+  };
+
+  const visibleMessages = messages.filter((m) => !deletedIds.has(m.id));
+  const msgById = new Map(messages.map((m) => [m.id, m]));
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
