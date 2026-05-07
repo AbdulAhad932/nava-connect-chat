@@ -140,6 +140,25 @@ const Chat = () => {
         .order("created_at", { ascending: true });
       setMessages((msgs ?? []) as Message[]);
 
+      // Load own deletions + stars
+      const msgIds = (msgs ?? []).map((m: any) => m.id);
+      if (msgIds.length) {
+        const [{ data: dels }, { data: stars }] = await Promise.all([
+          supabase
+            .from("message_deletions")
+            .select("message_id")
+            .eq("user_id", user.id)
+            .in("message_id", msgIds),
+          supabase
+            .from("starred_messages")
+            .select("message_id")
+            .eq("user_id", user.id)
+            .in("message_id", msgIds),
+        ]);
+        setDeletedIds(new Set((dels ?? []).map((d: any) => d.message_id)));
+        setStarredIds(new Set((stars ?? []).map((s: any) => s.message_id)));
+      }
+
       await supabase
         .from("messages")
         .update({ is_delivered: true, is_read: true })
