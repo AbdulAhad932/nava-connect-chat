@@ -497,6 +497,7 @@ const Chat = () => {
   const visibleMessages = messages.filter((m) => !deletedIds.has(m.id));
   const msgById = new Map(messages.map((m) => [m.id, m]));
 
+  if (loading || !ready || !other) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
