@@ -10,27 +10,34 @@ import {
   ArrowLeft,
   Check,
   CheckCheck,
+  CornerUpLeft,
   FileText,
+  Forward,
   Image as ImageIcon,
   Loader2,
   Mic,
+  MoreVertical,
   Paperclip,
   Pause,
   Phone,
   Play,
   Send,
-  Square,
+  Star,
+  StarOff,
+  Trash2,
   Video,
   X,
 } from "lucide-react";
 import { useCall } from "@/contexts/CallContext";
 import { MessageReactions } from "@/components/MessageReactions";
+import { ForwardDialog } from "@/components/ForwardDialog";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -49,6 +56,9 @@ interface Message {
   media_name: string | null;
   media_size: number | null;
   duration_ms: number | null;
+  reply_to_id: string | null;
+  forwarded_from_id: string | null;
+  is_deleted_for_everyone: boolean;
 }
 
 interface Profile {
