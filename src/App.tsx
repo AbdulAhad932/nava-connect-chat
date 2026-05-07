@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ThemeProvider } from "@/hooks/useTheme";
 import { CallProvider } from "@/contexts/CallContext";
 import { CallScreen } from "@/components/CallScreen";
 import { useGlobalNotifications } from "@/hooks/useGlobalNotifications";
@@ -17,6 +18,7 @@ import CreateGroup from "./pages/CreateGroup.tsx";
 import GroupChat from "./pages/GroupChat.tsx";
 import GroupInfo from "./pages/GroupInfo.tsx";
 import StatusViewer from "./pages/StatusViewer.tsx";
+import Settings from "./pages/Settings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,7 @@ const AppShell = () => {
         <Route path="/group/:groupId" element={<GroupChat />} />
         <Route path="/group/:groupId/info" element={<GroupInfo />} />
         <Route path="/status/:userId" element={<StatusViewer />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <CallScreen />
@@ -50,7 +53,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppShell />
+          <ThemeProvider>
+            <AppShell />
+          </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
