@@ -249,6 +249,15 @@ const Index = () => {
         <Button
           size="icon"
           variant="ghost"
+          onClick={() => navigate("/starred")}
+          className="text-primary-foreground hover:bg-primary-foreground/10"
+          aria-label="Starred messages"
+        >
+          <Star className="h-5 w-5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
           onClick={() => navigate("/settings")}
           className="text-primary-foreground hover:bg-primary-foreground/10"
         >
