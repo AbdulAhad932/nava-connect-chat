@@ -923,6 +923,12 @@ const Chat = () => {
           )}
         </div>
       )}
+
+      <ForwardDialog
+        open={!!forwardMsg}
+        onOpenChange={(v) => !v && setForwardMsg(null)}
+        message={forwardMsg}
+      />
     </div>
   );
 };
