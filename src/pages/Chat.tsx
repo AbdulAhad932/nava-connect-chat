@@ -571,7 +571,7 @@ const Chat = () => {
         </Button>
       </header>
 
-      <MessageReactions messageIds={messages.map((m) => m.id)}>
+      <MessageReactions messageIds={visibleMessages.map((m) => m.id)}>
         {({ bind, renderReactions, pickerNode }) => (
           <>
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
