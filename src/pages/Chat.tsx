@@ -299,11 +299,14 @@ const Chat = () => {
     const body = text.trim();
     setText("");
     stopTyping();
+    const replyId = replyTo?.id ?? null;
+    setReplyTo(null);
     const { error } = await supabase.from("messages").insert({
       sender_id: user.id,
       receiver_id: userId,
       message: body,
       media_type: "text",
+      reply_to_id: replyId,
     });
     setSending(false);
     if (error) {
