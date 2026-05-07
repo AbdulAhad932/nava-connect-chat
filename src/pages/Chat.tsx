@@ -800,6 +800,29 @@ const Chat = () => {
         onChange={onPickFile}
       />
 
+      {replyTo && (
+        <div className="bg-background border-t px-3 py-2 flex items-start gap-2">
+          <div className="w-1 self-stretch rounded bg-primary" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-primary">
+              Replying to {replyTo.sender_id === user!.id ? "yourself" : (other.name ?? "User")}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {replyTo.media_type === "image"
+                ? "📷 Photo"
+                : replyTo.media_type === "document"
+                  ? `📎 ${replyTo.media_name ?? "Document"}`
+                  : replyTo.media_type === "voice"
+                    ? "🎤 Voice message"
+                    : replyTo.message ?? ""}
+            </p>
+          </div>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setReplyTo(null)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {recording ? (
         <div className="bg-background border-t px-3 py-2 flex items-center gap-3">
           <Button
