@@ -7,7 +7,7 @@ import { NavaLogo } from "@/components/NavaLogo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, LogOut, MessageSquarePlus, Search, Settings as SettingsIcon, Users } from "lucide-react";
+import { Loader2, LogOut, MessageSquarePlus, Search, Settings as SettingsIcon, Star, Users } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { StatusBar } from "@/components/StatusBar";
 
