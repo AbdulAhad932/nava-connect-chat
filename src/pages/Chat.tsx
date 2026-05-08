@@ -498,7 +498,65 @@ const Chat = () => {
   };
 
   const visibleMessages = messages.filter((m) => !deletedIds.has(m.id));
-  const msgById = new Map(messages.map((m) => [m.id, m]));
+  const msgById = useMemo(() => {
+    const map = new Map<string, Message>();
+    for (const m of messages) map.set(m.id, m);
+    for (const m of Object.values(extraMsgs)) if (!map.has(m.id)) map.set(m.id, m);
+    return map;
+  }, [messages, extraMsgs]);
+
+  // Fetch missing parent messages (replied-to / forwarded-from sources)
+  useEffect(() => {
+    if (!user) return;
+    const have = new Set([...messages.map((m) => m.id), ...Object.keys(extraMsgs)]);
+    const missing = new Set<string>();
+    for (const m of messages) {
+      if (m.reply_to_id && !have.has(m.reply_to_id)) missing.add(m.reply_to_id);
+      if (m.forwarded_from_id && !have.has(m.forwarded_from_id)) missing.add(m.forwarded_from_id);
+    }
+    if (missing.size === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("*")
+        .in("id", Array.from(missing));
+      if (cancelled || !data?.length) return;
+      setExtraMsgs((prev) => {
+        const next = { ...prev };
+        for (const m of data as Message[]) next[m.id] = m;
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [messages, extraMsgs, user]);
+
+  const scrollToMessage = (id: string) => {
+    const el = msgRefs.current[id];
+    if (!el) {
+      toast.info("Original message not loaded");
+      return;
+    }
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightId(id);
+    window.setTimeout(() => setHighlightId((c) => (c === id ? null : c)), 1400);
+  };
+
+  const previewText = (m: Message) => {
+    if (m.is_deleted_for_everyone) return "🚫 deleted message";
+    switch (m.media_type) {
+      case "image":
+        return "📷 Photo";
+      case "document":
+        return `📎 ${m.media_name ?? "Document"}`;
+      case "voice":
+        return `🎤 Voice (${fmtDur(m.duration_ms)})`;
+      default:
+        return m.message ?? "";
+    }
+  };
 
   if (loading || !ready || !other) {
     return (
