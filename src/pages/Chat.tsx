@@ -646,14 +646,23 @@ const Chat = () => {
                 const url = m.media_url ? signed[m.media_url] : undefined;
                 const deleted = m.is_deleted_for_everyone;
                 const replied = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
+                const repliedHidden = replied ? deletedIds.has(replied.id) : false;
+                const fwdSrc = m.forwarded_from_id ? msgById.get(m.forwarded_from_id) : null;
+                const fwdSenderName = fwdSrc
+                  ? fwdSrc.sender_id === user!.id
+                    ? "you"
+                    : (other.name ?? "User")
+                  : null;
                 const isStarred = starredIds.has(m.id);
                 const offsetDx = swipeOffset?.id === m.id ? swipeOffset.dx : 0;
                 const ageMs = Date.now() - new Date(m.created_at).getTime();
                 const canDeleteForEveryone = mine && !deleted && ageMs < 60 * 60 * 1000;
+                const isHighlighted = highlightId === m.id;
                 return (
                   <div
                     key={m.id}
-                    className={`flex flex-col ${mine ? "items-end" : "items-start"}`}
+                    ref={(el) => (msgRefs.current[m.id] = el)}
+                    className={`flex flex-col ${mine ? "items-end" : "items-start"} ${isHighlighted ? "animate-pulse" : ""}`}
                   >
                     <div className="relative w-full flex" style={{ justifyContent: mine ? "flex-end" : "flex-start" }}>
                       {offsetDx > 20 && (
@@ -668,34 +677,55 @@ const Chat = () => {
                       >
                         <div
                           {...(deleted ? {} : bind(m.id))}
-                          className={`rounded-2xl px-2 py-2 shadow-sm select-none ${deleted ? "opacity-70 italic" : "touch-none"} ${
+                          className={`rounded-2xl px-2 py-2 shadow-sm select-none transition-shadow ${deleted ? "opacity-70 italic" : "touch-none"} ${
                             mine
                               ? "bg-primary text-primary-foreground rounded-br-sm"
                               : "bg-background text-foreground rounded-bl-sm"
-                          }`}
+                          } ${isHighlighted ? "ring-2 ring-primary/60" : ""}`}
                         >
                           {m.forwarded_from_id && !deleted && (
                             <p className={`text-[11px] flex items-center gap-1 mb-1 px-1 italic ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                              <Forward className="h-3 w-3" /> Forwarded
+                              <Forward className="h-3 w-3" />
+                              {fwdSenderName ? `Forwarded from ${fwdSenderName}` : "Forwarded"}
                             </p>
                           )}
-                          {replied && !deleted && (
-                            <div className={`mb-1 px-2 py-1 rounded-md border-l-2 text-xs ${mine ? "bg-primary-foreground/10 border-primary-foreground/60" : "bg-muted/60 border-primary"}`}>
-                              <p className="font-semibold opacity-80">
-                                {replied.sender_id === user!.id ? "You" : (other.name ?? "User")}
-                              </p>
-                              <p className="truncate opacity-80 max-w-[220px]">
-                                {replied.is_deleted_for_everyone
-                                  ? "deleted message"
-                                  : replied.media_type === "image"
-                                    ? "📷 Photo"
-                                    : replied.media_type === "document"
-                                      ? `📎 ${replied.media_name ?? "Document"}`
-                                      : replied.media_type === "voice"
-                                        ? "🎤 Voice message"
-                                        : replied.message ?? ""}
-                              </p>
-                            </div>
+                          {m.reply_to_id && !deleted && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (replied && !repliedHidden) scrollToMessage(replied.id);
+                              }}
+                              className={`w-full text-left mb-1 px-2 py-1 rounded-md border-l-2 text-xs transition-colors ${
+                                mine
+                                  ? "bg-primary-foreground/10 border-primary-foreground/60 hover:bg-primary-foreground/20"
+                                  : "bg-muted/60 border-primary hover:bg-muted"
+                              }`}
+                            >
+                              {!replied ? (
+                                <p className="italic opacity-70 truncate">
+                                  Original message unavailable
+                                </p>
+                              ) : (
+                                <div className="flex items-start gap-2">
+                                  {!repliedHidden && replied.media_type === "image" && replied.media_url && signed[replied.media_url] && (
+                                    <img
+                                      src={signed[replied.media_url]}
+                                      alt=""
+                                      className="h-9 w-9 rounded object-cover shrink-0"
+                                    />
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-semibold opacity-80 truncate">
+                                      {replied.sender_id === user!.id ? "You" : (other.name ?? "User")}
+                                    </p>
+                                    <p className="truncate opacity-80 max-w-[220px]">
+                                      {repliedHidden ? "Message removed" : previewText(replied)}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </button>
                           )}
                           {deleted ? (
                             <p className="text-sm px-1 flex items-center gap-1">
