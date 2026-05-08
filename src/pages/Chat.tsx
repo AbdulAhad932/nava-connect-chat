@@ -98,6 +98,9 @@ const Chat = () => {
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
   const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
+  const [extraMsgs, setExtraMsgs] = useState<Record<string, Message>>({});
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const onlineSet = useGlobalPresence(user?.id);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
