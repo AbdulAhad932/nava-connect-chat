@@ -98,6 +98,9 @@ const Chat = () => {
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
   const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
+  const [extraMsgs, setExtraMsgs] = useState<Record<string, Message>>({});
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const onlineSet = useGlobalPresence(user?.id);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -495,7 +498,65 @@ const Chat = () => {
   };
 
   const visibleMessages = messages.filter((m) => !deletedIds.has(m.id));
-  const msgById = new Map(messages.map((m) => [m.id, m]));
+  const msgById = useMemo(() => {
+    const map = new Map<string, Message>();
+    for (const m of messages) map.set(m.id, m);
+    for (const m of Object.values(extraMsgs)) if (!map.has(m.id)) map.set(m.id, m);
+    return map;
+  }, [messages, extraMsgs]);
+
+  // Fetch missing parent messages (replied-to / forwarded-from sources)
+  useEffect(() => {
+    if (!user) return;
+    const have = new Set([...messages.map((m) => m.id), ...Object.keys(extraMsgs)]);
+    const missing = new Set<string>();
+    for (const m of messages) {
+      if (m.reply_to_id && !have.has(m.reply_to_id)) missing.add(m.reply_to_id);
+      if (m.forwarded_from_id && !have.has(m.forwarded_from_id)) missing.add(m.forwarded_from_id);
+    }
+    if (missing.size === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("*")
+        .in("id", Array.from(missing));
+      if (cancelled || !data?.length) return;
+      setExtraMsgs((prev) => {
+        const next = { ...prev };
+        for (const m of data as Message[]) next[m.id] = m;
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [messages, extraMsgs, user]);
+
+  const scrollToMessage = (id: string) => {
+    const el = msgRefs.current[id];
+    if (!el) {
+      toast.info("Original message not loaded");
+      return;
+    }
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightId(id);
+    window.setTimeout(() => setHighlightId((c) => (c === id ? null : c)), 1400);
+  };
+
+  const previewText = (m: Message) => {
+    if (m.is_deleted_for_everyone) return "🚫 deleted message";
+    switch (m.media_type) {
+      case "image":
+        return "📷 Photo";
+      case "document":
+        return `📎 ${m.media_name ?? "Document"}`;
+      case "voice":
+        return `🎤 Voice (${fmtDur(m.duration_ms)})`;
+      default:
+        return m.message ?? "";
+    }
+  };
 
   if (loading || !ready || !other) {
     return (
@@ -585,14 +646,23 @@ const Chat = () => {
                 const url = m.media_url ? signed[m.media_url] : undefined;
                 const deleted = m.is_deleted_for_everyone;
                 const replied = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
+                const repliedHidden = replied ? deletedIds.has(replied.id) : false;
+                const fwdSrc = m.forwarded_from_id ? msgById.get(m.forwarded_from_id) : null;
+                const fwdSenderName = fwdSrc
+                  ? fwdSrc.sender_id === user!.id
+                    ? "you"
+                    : (other.name ?? "User")
+                  : null;
                 const isStarred = starredIds.has(m.id);
                 const offsetDx = swipeOffset?.id === m.id ? swipeOffset.dx : 0;
                 const ageMs = Date.now() - new Date(m.created_at).getTime();
                 const canDeleteForEveryone = mine && !deleted && ageMs < 60 * 60 * 1000;
+                const isHighlighted = highlightId === m.id;
                 return (
                   <div
                     key={m.id}
-                    className={`flex flex-col ${mine ? "items-end" : "items-start"}`}
+                    ref={(el) => (msgRefs.current[m.id] = el)}
+                    className={`flex flex-col ${mine ? "items-end" : "items-start"} ${isHighlighted ? "animate-pulse" : ""}`}
                   >
                     <div className="relative w-full flex" style={{ justifyContent: mine ? "flex-end" : "flex-start" }}>
                       {offsetDx > 20 && (
@@ -607,34 +677,55 @@ const Chat = () => {
                       >
                         <div
                           {...(deleted ? {} : bind(m.id))}
-                          className={`rounded-2xl px-2 py-2 shadow-sm select-none ${deleted ? "opacity-70 italic" : "touch-none"} ${
+                          className={`rounded-2xl px-2 py-2 shadow-sm select-none transition-shadow ${deleted ? "opacity-70 italic" : "touch-none"} ${
                             mine
                               ? "bg-primary text-primary-foreground rounded-br-sm"
                               : "bg-background text-foreground rounded-bl-sm"
-                          }`}
+                          } ${isHighlighted ? "ring-2 ring-primary/60" : ""}`}
                         >
                           {m.forwarded_from_id && !deleted && (
                             <p className={`text-[11px] flex items-center gap-1 mb-1 px-1 italic ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                              <Forward className="h-3 w-3" /> Forwarded
+                              <Forward className="h-3 w-3" />
+                              {fwdSenderName ? `Forwarded from ${fwdSenderName}` : "Forwarded"}
                             </p>
                           )}
-                          {replied && !deleted && (
-                            <div className={`mb-1 px-2 py-1 rounded-md border-l-2 text-xs ${mine ? "bg-primary-foreground/10 border-primary-foreground/60" : "bg-muted/60 border-primary"}`}>
-                              <p className="font-semibold opacity-80">
-                                {replied.sender_id === user!.id ? "You" : (other.name ?? "User")}
-                              </p>
-                              <p className="truncate opacity-80 max-w-[220px]">
-                                {replied.is_deleted_for_everyone
-                                  ? "deleted message"
-                                  : replied.media_type === "image"
-                                    ? "📷 Photo"
-                                    : replied.media_type === "document"
-                                      ? `📎 ${replied.media_name ?? "Document"}`
-                                      : replied.media_type === "voice"
-                                        ? "🎤 Voice message"
-                                        : replied.message ?? ""}
-                              </p>
-                            </div>
+                          {m.reply_to_id && !deleted && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (replied && !repliedHidden) scrollToMessage(replied.id);
+                              }}
+                              className={`w-full text-left mb-1 px-2 py-1 rounded-md border-l-2 text-xs transition-colors ${
+                                mine
+                                  ? "bg-primary-foreground/10 border-primary-foreground/60 hover:bg-primary-foreground/20"
+                                  : "bg-muted/60 border-primary hover:bg-muted"
+                              }`}
+                            >
+                              {!replied ? (
+                                <p className="italic opacity-70 truncate">
+                                  Original message unavailable
+                                </p>
+                              ) : (
+                                <div className="flex items-start gap-2">
+                                  {!repliedHidden && replied.media_type === "image" && replied.media_url && signed[replied.media_url] && (
+                                    <img
+                                      src={signed[replied.media_url]}
+                                      alt=""
+                                      className="h-9 w-9 rounded object-cover shrink-0"
+                                    />
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-semibold opacity-80 truncate">
+                                      {replied.sender_id === user!.id ? "You" : (other.name ?? "User")}
+                                    </p>
+                                    <p className="truncate opacity-80 max-w-[220px]">
+                                      {repliedHidden ? "Message removed" : previewText(replied)}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </button>
                           )}
                           {deleted ? (
                             <p className="text-sm px-1 flex items-center gap-1">
